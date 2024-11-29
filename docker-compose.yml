@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgresql-db-user:
+    image: postgres:latest
+    ports:
+      - "5433:5432"
+    networks:
+      - devops_network
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgresql-db-user:/var/lib/postgresql/data
+
+  user-service:
+    build: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql-db-user:5432/user_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8081:8080"
+    networks:
+      - devops_network
+    depends_on:
+      - postgresql-db-user
+    restart: on-failure
+
+networks:
+  devops_network:
+    external: true
+
+volumes:
+  postgresql-db-user:
