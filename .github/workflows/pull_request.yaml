@@ -1,0 +1,49 @@
+name: booking-be pr workflow
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/user_service
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - master
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: "21"
+          distribution: "temurin"
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Install Dependencies and Build
+        run: mvn clean install -DskipTests
+        working-directory: .
+
+      - name: Run Unit Tests
+        run: mvn test
+        working-directory: .
+
+      - name: Package Application
+        run: mvn package -DskipTests
+        working-directory: .
