@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   postgresql-db-user:
     image: postgres:latest
     ports:
-      - "5433:5432"
+      - "5432:5432"
     networks:
       - devops_network
     environment:
@@ -22,7 +20,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: admin
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
     ports:
-      - "8081:8080"
+      - "8080:8080"
     networks:
       - devops_network
     depends_on:
