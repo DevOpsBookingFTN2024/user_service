@@ -5,9 +5,13 @@ WORKDIR /home/user_service
 COPY .mvn/ .mvn/
 COPY mvnw pom.xml ./
 
+RUN apt-get update && apt-get install -y dos2unix && dos2unix mvnw
+
 COPY src ./src
 
-RUN ./mvnw package -DskipTests
+RUN chmod +x ./mvnw
+
+RUN bash ./mvnw package -DskipTests
 
 FROM eclipse-temurin:21-jre
 
