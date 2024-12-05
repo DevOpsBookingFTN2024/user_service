@@ -10,6 +10,7 @@ import uns.ac.rs.user_service.dto.response.MessageResponse;
 import uns.ac.rs.user_service.service.UserService;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/users")
@@ -27,5 +28,11 @@ public class UserController {
     public ResponseEntity<?> getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/{userId}")
+    public ResponseEntity<?> getUserById(@PathVariable UUID userId) {
+        UserDTO user = userService.getUserById(userId);
+        return ResponseEntity.ok(user);
     }
 }

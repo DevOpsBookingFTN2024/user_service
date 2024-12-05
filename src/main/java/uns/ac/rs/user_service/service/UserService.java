@@ -11,6 +11,7 @@ import uns.ac.rs.user_service.model.User;
 import uns.ac.rs.user_service.repository.UserRepository;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,5 +36,12 @@ public class UserService {
                 .stream()
                 .map(UserMapper::toUserDTO)
                 .collect(Collectors.toList());
+    }
+
+    public UserDTO getUserById(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        return UserMapper.toUserDTO(user);
     }
 }
