@@ -3,8 +3,10 @@ package uns.ac.rs.user_service.service;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +24,7 @@ import uns.ac.rs.user_service.security.jwt.JwtUtils;
 import uns.ac.rs.user_service.security.services.UserDetailsImpl;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -45,9 +48,9 @@ public class AuthService {
 
     public MessageResponse registerUser(RegistrationRequest registrationRequest) {
         if (userRepository.existsByUsername(registrationRequest.getUsername())) {
-            return new MessageResponse("Username is already taken.");
+            throw new IllegalArgumentException("Username is already taken.");
         } else if (userRepository.existsByEmailAddress(registrationRequest.getEmailAddress())) {
-            return new MessageResponse("Email address is already in use.");
+            throw new IllegalArgumentException("Email address is already in use.");
         } else {
             User newUser = new User(
                     registrationRequest.getUsername(),
@@ -63,7 +66,7 @@ public class AuthService {
 
             if (strRoles == null) {
                 Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
-                        .orElseThrow(() -> new RuntimeException("Role is not found with name: "
+                        .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
                                 + ERole.ROLE_GUEST));
                 roles.add(guestRole);
             } else {
@@ -71,19 +74,19 @@ public class AuthService {
                     switch (role) {
                         case "admin":
                             Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                    .orElseThrow(() -> new RuntimeException("Role is not found with name: "
+                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
                                             + ERole.ROLE_ADMIN));
                             roles.add(adminRole);
                             break;
                         case "host":
                             Role hostRole = roleRepository.findByName(ERole.ROLE_HOST)
-                                    .orElseThrow(() -> new RuntimeException("Role is not found with name: "
+                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
                                             + ERole.ROLE_HOST));
                             roles.add(hostRole);
                             break;
                         default:
                             Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
-                                    .orElseThrow(() -> new RuntimeException("Role is not found with name: "
+                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
                                             + ERole.ROLE_GUEST));
                             roles.add(guestRole);
                     }
@@ -97,18 +100,24 @@ public class AuthService {
     }
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmailAddress(), roles);
+            return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmailAddress(), roles);
+        } catch (AuthenticationException ex) {
+            throw new BadCredentialsException("Invalid username or password.");
+        }  catch (Exception ex) {
+            throw new RuntimeException("An unexpected error occurred during authentication.");
+        }
     }
 }
 

@@ -13,6 +13,7 @@ import uns.ac.rs.user_service.mapper.UserMapper;
 import uns.ac.rs.user_service.model.User;
 import uns.ac.rs.user_service.repository.UserRepository;
 import uns.ac.rs.user_service.security.services.UserDetailsImpl;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -37,14 +38,14 @@ public class UserService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         UUID userId = userDetails.getId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
 
         return UserMapper.toUserDTO(user);
     }
 
     public UserDTO getUserByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found with username: " + username));
+                .orElseThrow(() -> new NoSuchElementException("User not found with username: " + username));
 
         return UserMapper.toUserDTO(user);
     }
@@ -54,7 +55,7 @@ public class UserService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         UUID userId = userDetails.getId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
 
         if (Objects.equals(userUpdateRequest.getUsername(), userDetails.getUsername())) {
             if (Objects.equals(userUpdateRequest.getEmailAddress(), userDetails.getEmailAddress())) {
@@ -65,7 +66,7 @@ public class UserService {
                 userRepository.save(user);
                 return new MessageResponse("User updated successfully.");
             } else if (userRepository.existsByEmailAddress(userUpdateRequest.getEmailAddress())) {
-                return new MessageResponse("Email address is already in use.");
+                throw new IllegalArgumentException("Email address is already in use.");
             } else {
                 user.setEmailAddress(userUpdateRequest.getEmailAddress());
                 user.setFirstName(userUpdateRequest.getFirstName());
@@ -76,16 +77,26 @@ public class UserService {
                 return new MessageResponse("User updated successfully.");
             }
         } else if (userRepository.existsByUsername(userUpdateRequest.getUsername())) {
-            return new MessageResponse("Username is already taken.");
+            throw new IllegalArgumentException("Username is already taken.");
         } else {
-            user.setUsername(userUpdateRequest.getUsername());
-            user.setEmailAddress(userUpdateRequest.getEmailAddress());
-            user.setFirstName(userUpdateRequest.getFirstName());
-            user.setLastName(userUpdateRequest.getLastName());
-            user.setResidence(userUpdateRequest.getResidence());
+            if (Objects.equals(userUpdateRequest.getEmailAddress(), userDetails.getEmailAddress())) {
+                user.setFirstName(userUpdateRequest.getFirstName());
+                user.setLastName(userUpdateRequest.getLastName());
+                user.setResidence(userUpdateRequest.getResidence());
 
-            userRepository.save(user);
-            return new MessageResponse("User updated successfully.");
+                userRepository.save(user);
+                return new MessageResponse("User updated successfully.");
+            } else if (userRepository.existsByEmailAddress(userUpdateRequest.getEmailAddress())) {
+                throw new IllegalArgumentException("Email address is already in use.");
+            } else {
+                user.setEmailAddress(userUpdateRequest.getEmailAddress());
+                user.setFirstName(userUpdateRequest.getFirstName());
+                user.setLastName(userUpdateRequest.getLastName());
+                user.setResidence(userUpdateRequest.getResidence());
+
+                userRepository.save(user);
+                return new MessageResponse("User updated successfully.");
+            }
         }
     }
 
@@ -94,14 +105,14 @@ public class UserService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         UUID userId = userDetails.getId();
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
 
         if (!passwordEncoder.matches(passwordChangeRequest.getOldPassword(), user.getPassword())) {
-            return new MessageResponse("Old password is incorrect.");
+            throw new IllegalArgumentException("Old password is incorrect.");
         }
 
         if (!passwordChangeRequest.getNewPassword().equals(passwordChangeRequest.getRepeatNewPassword())) {
-            return new MessageResponse("New passwords do not match.");
+            throw new IllegalArgumentException("New passwords do not match.");
         }
 
         user.setPassword(passwordEncoder.encode(passwordChangeRequest.getNewPassword()));
