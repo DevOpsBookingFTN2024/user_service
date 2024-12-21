@@ -5,7 +5,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}/user_service
 
 on:
-  push:
+  pull_request: 
+    types: [ opened, reopened, synchronize ]
     branches:
       - main
       - develop
