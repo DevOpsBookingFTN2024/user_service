@@ -24,13 +24,10 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-
     public UserService(PasswordEncoder passwordEncoder,
-                       UserRepository userRepository
-                     ) {
+                       UserRepository userRepository) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
-
     }
 
     public UserDTO getCurrentUser() {
@@ -57,47 +54,24 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
 
-        if (Objects.equals(userUpdateRequest.getUsername(), userDetails.getUsername())) {
-            if (Objects.equals(userUpdateRequest.getEmailAddress(), userDetails.getEmailAddress())) {
-                user.setFirstName(userUpdateRequest.getFirstName());
-                user.setLastName(userUpdateRequest.getLastName());
-                user.setResidence(userUpdateRequest.getResidence());
-
-                userRepository.save(user);
-                return new MessageResponse("User updated successfully.");
-            } else if (userRepository.existsByEmailAddress(userUpdateRequest.getEmailAddress())) {
-                throw new IllegalArgumentException("Email address is already in use.");
-            } else {
-                user.setEmailAddress(userUpdateRequest.getEmailAddress());
-                user.setFirstName(userUpdateRequest.getFirstName());
-                user.setLastName(userUpdateRequest.getLastName());
-                user.setResidence(userUpdateRequest.getResidence());
-
-                userRepository.save(user);
-                return new MessageResponse("User updated successfully.");
-            }
-        } else if (userRepository.existsByUsername(userUpdateRequest.getUsername())) {
+        if (!Objects.equals(userUpdateRequest.getUsername(), userDetails.getUsername())
+                && userRepository.existsByUsername(userUpdateRequest.getUsername())) {
             throw new IllegalArgumentException("Username is already taken.");
-        } else {
-            if (Objects.equals(userUpdateRequest.getEmailAddress(), userDetails.getEmailAddress())) {
-                user.setFirstName(userUpdateRequest.getFirstName());
-                user.setLastName(userUpdateRequest.getLastName());
-                user.setResidence(userUpdateRequest.getResidence());
-
-                userRepository.save(user);
-                return new MessageResponse("User updated successfully.");
-            } else if (userRepository.existsByEmailAddress(userUpdateRequest.getEmailAddress())) {
-                throw new IllegalArgumentException("Email address is already in use.");
-            } else {
-                user.setEmailAddress(userUpdateRequest.getEmailAddress());
-                user.setFirstName(userUpdateRequest.getFirstName());
-                user.setLastName(userUpdateRequest.getLastName());
-                user.setResidence(userUpdateRequest.getResidence());
-
-                userRepository.save(user);
-                return new MessageResponse("User updated successfully.");
-            }
         }
+
+        if (!Objects.equals(userUpdateRequest.getEmailAddress(), userDetails.getEmailAddress())
+                && userRepository.existsByEmailAddress(userUpdateRequest.getEmailAddress())) {
+            throw new IllegalArgumentException("Email address is already in use.");
+        }
+
+        user.setUsername(userUpdateRequest.getUsername());
+        user.setEmailAddress(userUpdateRequest.getEmailAddress());
+        user.setFirstName(userUpdateRequest.getFirstName());
+        user.setLastName(userUpdateRequest.getLastName());
+        user.setResidence(userUpdateRequest.getResidence());
+
+        userRepository.save(user);
+        return new MessageResponse("User updated successfully.");
     }
 
     public MessageResponse changePassword(PasswordChangeRequest passwordChangeRequest) {
