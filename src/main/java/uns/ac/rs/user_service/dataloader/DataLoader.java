@@ -17,9 +17,11 @@ public class DataLoader implements CommandLineRunner {
         if (!roleRepository.existsByName(ERole.ROLE_ADMIN)) {
             roleRepository.save(new Role(null, ERole.ROLE_ADMIN));
         }
+
         if (!roleRepository.existsByName(ERole.ROLE_HOST)) {
             roleRepository.save(new Role(null, ERole.ROLE_HOST));
         }
+
         if (!roleRepository.existsByName(ERole.ROLE_GUEST)) {
             roleRepository.save(new Role(null, ERole.ROLE_GUEST));
         }
