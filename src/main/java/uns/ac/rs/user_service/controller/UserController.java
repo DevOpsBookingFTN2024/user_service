@@ -40,4 +40,10 @@ public class UserController {
         MessageResponse messageResponse = userService.changePassword(passwordChangeRequest);
         return ResponseEntity.ok(messageResponse);
     }
+
+    @DeleteMapping("/delete")
+    public ResponseEntity<?> deleteCurrentUser() {
+        MessageResponse messageResponse = userService.deleteCurrentUser();
+        return ResponseEntity.ok(messageResponse);
+    }
 }

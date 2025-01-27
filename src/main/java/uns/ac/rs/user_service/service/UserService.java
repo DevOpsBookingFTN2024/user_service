@@ -13,9 +13,13 @@ import uns.ac.rs.user_service.mapper.UserMapper;
 import uns.ac.rs.user_service.model.User;
 import uns.ac.rs.user_service.repository.UserRepository;
 import uns.ac.rs.user_service.security.services.UserDetailsImpl;
+import uns.ac.rs.user_service.service.client.ReservationServiceClient;
+
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -24,18 +28,21 @@ public class UserService {
 
     private final UserRepository userRepository;
 
+    private final ReservationServiceClient reservationServiceClient;
+
     public UserService(PasswordEncoder passwordEncoder,
-                       UserRepository userRepository) {
+                       UserRepository userRepository,
+                       ReservationServiceClient reservationServiceClient) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
+        this.reservationServiceClient = reservationServiceClient;
     }
 
     public UserDTO getCurrentUser() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        UUID userId = userDetails.getId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userDetails.getId()));
 
         return UserMapper.toUserDTO(user);
     }
@@ -50,9 +57,8 @@ public class UserService {
     public MessageResponse updateCurrentUser(UserUpdateRequest userUpdateRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        UUID userId = userDetails.getId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userDetails.getId()));
 
         if (!Objects.equals(userUpdateRequest.getUsername(), userDetails.getUsername())
                 && userRepository.existsByUsername(userUpdateRequest.getUsername())) {
@@ -77,9 +83,8 @@ public class UserService {
     public MessageResponse changePassword(PasswordChangeRequest passwordChangeRequest) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        UUID userId = userDetails.getId();
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userId));
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userDetails.getId()));
 
         if (!passwordEncoder.matches(passwordChangeRequest.getOldPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Old password is incorrect.");
@@ -93,5 +98,37 @@ public class UserService {
 
         userRepository.save(user);
         return new MessageResponse("Password changed successfully.");
+    }
+
+    public MessageResponse deleteCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        User user = userRepository.findById(userDetails.getId())
+                .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userDetails.getId()));
+
+        Set<String> roles = user.getRoles()
+                .stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toSet());
+
+        if (roles.contains("ROLE_GUEST")) {
+            if(!reservationServiceClient.isGuestHasAcceptedReservation(user.getUsername())) {
+                userRepository.delete(user);
+
+                return new MessageResponse("User deleted successfully.");
+            } else {
+                throw new SecurityException("You cannot delete your account.");
+            }
+        } else if (roles.contains("ROLE_HOST")) {
+            if(!reservationServiceClient.isHostHasAcceptedReservation(user.getUsername())) {
+                userRepository.delete(user);
+
+                return new MessageResponse("User deleted successfully.");
+            } else {
+                throw new SecurityException("You cannot delete your account.");
+            }
+        } else {
+            throw new SecurityException("You cannot delete your account.");
+        }
     }
 }

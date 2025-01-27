@@ -49,54 +49,55 @@ public class AuthService {
     public MessageResponse registerUser(RegistrationRequest registrationRequest) {
         if (userRepository.existsByUsername(registrationRequest.getUsername())) {
             throw new IllegalArgumentException("Username is already taken.");
-        } else if (userRepository.existsByEmailAddress(registrationRequest.getEmailAddress())) {
-            throw new IllegalArgumentException("Email address is already in use.");
-        } else {
-            User newUser = new User(
-                    registrationRequest.getUsername(),
-                    encoder.encode(registrationRequest.getPassword()),
-                    registrationRequest.getEmailAddress(),
-                    registrationRequest.getFirstName(),
-                    registrationRequest.getLastName(),
-                    registrationRequest.getResidence()
-            );
-
-            Set<String> strRoles = registrationRequest.getRole();
-            Set<Role> roles = new HashSet<>();
-
-            if (strRoles == null) {
-                Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
-                        .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
-                                + ERole.ROLE_GUEST));
-                roles.add(guestRole);
-            } else {
-                strRoles.forEach(role -> {
-                    switch (role) {
-                        case "admin":
-                            Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
-                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
-                                            + ERole.ROLE_ADMIN));
-                            roles.add(adminRole);
-                            break;
-                        case "host":
-                            Role hostRole = roleRepository.findByName(ERole.ROLE_HOST)
-                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
-                                            + ERole.ROLE_HOST));
-                            roles.add(hostRole);
-                            break;
-                        default:
-                            Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
-                                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
-                                            + ERole.ROLE_GUEST));
-                            roles.add(guestRole);
-                    }
-                });
-            }
-
-            newUser.setRoles(roles);
-            userRepository.save(newUser);
-            return new MessageResponse("User registered successfully.");
         }
+
+        if (userRepository.existsByEmailAddress(registrationRequest.getEmailAddress())) {
+            throw new IllegalArgumentException("Email address is already in use.");
+        }
+
+        User newUser = new User(
+                registrationRequest.getUsername(),
+                encoder.encode(registrationRequest.getPassword()),
+                registrationRequest.getEmailAddress(),
+                registrationRequest.getFirstName(),
+                registrationRequest.getLastName(),
+                registrationRequest.getResidence()
+        );
+
+        Set<String> strRoles = registrationRequest.getRole();
+        Set<Role> roles = new HashSet<>();
+
+        if (strRoles == null) {
+            Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
+                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: " + ERole.ROLE_GUEST));
+            roles.add(guestRole);
+        } else {
+            strRoles.forEach(role -> {
+                switch (role) {
+                    case "admin":
+                        Role adminRole = roleRepository.findByName(ERole.ROLE_ADMIN)
+                                .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
+                                        + ERole.ROLE_ADMIN));
+                        roles.add(adminRole);
+                        break;
+                    case "host":
+                        Role hostRole = roleRepository.findByName(ERole.ROLE_HOST)
+                                .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
+                                        + ERole.ROLE_HOST));
+                        roles.add(hostRole);
+                        break;
+                    default:
+                        Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
+                                .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
+                                        + ERole.ROLE_GUEST));
+                        roles.add(guestRole);
+                }
+            });
+        }
+
+        newUser.setRoles(roles);
+        userRepository.save(newUser);
+        return new MessageResponse("User registered successfully.");
     }
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
@@ -120,4 +121,3 @@ public class AuthService {
         }
     }
 }
-
