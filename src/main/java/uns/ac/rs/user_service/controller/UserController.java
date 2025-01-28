@@ -42,8 +42,9 @@ public class UserController {
     }
 
     @DeleteMapping("/delete")
-    public ResponseEntity<?> deleteCurrentUser() {
-        MessageResponse messageResponse = userService.deleteCurrentUser();
+    public ResponseEntity<?> deleteCurrentUser(@RequestHeader("Authorization") String authorizationHeader) {
+        String jwtToken = authorizationHeader.replace("Bearer ", "");
+        MessageResponse messageResponse = userService.deleteCurrentUser(jwtToken);
         return ResponseEntity.ok(messageResponse);
     }
 }

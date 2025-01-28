@@ -13,12 +13,11 @@ import uns.ac.rs.user_service.mapper.UserMapper;
 import uns.ac.rs.user_service.model.User;
 import uns.ac.rs.user_service.repository.UserRepository;
 import uns.ac.rs.user_service.security.services.UserDetailsImpl;
+import uns.ac.rs.user_service.service.client.AccommodationServiceClient;
 import uns.ac.rs.user_service.service.client.ReservationServiceClient;
-
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,12 +29,16 @@ public class UserService {
 
     private final ReservationServiceClient reservationServiceClient;
 
+    private final AccommodationServiceClient accommodationServiceClient;
+
     public UserService(PasswordEncoder passwordEncoder,
                        UserRepository userRepository,
-                       ReservationServiceClient reservationServiceClient) {
+                       ReservationServiceClient reservationServiceClient,
+                       AccommodationServiceClient accommodationServiceClient) {
         this.passwordEncoder = passwordEncoder;
         this.userRepository = userRepository;
         this.reservationServiceClient = reservationServiceClient;
+        this.accommodationServiceClient = accommodationServiceClient;
     }
 
     public UserDTO getCurrentUser() {
@@ -77,6 +80,7 @@ public class UserService {
         user.setResidence(userUpdateRequest.getResidence());
 
         userRepository.save(user);
+
         return new MessageResponse("User updated successfully.");
     }
 
@@ -97,22 +101,26 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(passwordChangeRequest.getNewPassword()));
 
         userRepository.save(user);
+
         return new MessageResponse("Password changed successfully.");
     }
 
-    public MessageResponse deleteCurrentUser() {
+    public MessageResponse deleteCurrentUser(String jwtToken) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         User user = userRepository.findById(userDetails.getId())
                 .orElseThrow(() -> new NoSuchElementException("User not found with id: " + userDetails.getId()));
 
-        Set<String> roles = user.getRoles()
+        Set<String> roles = user
+                .getRoles()
                 .stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());
 
         if (roles.contains("ROLE_GUEST")) {
             if(!reservationServiceClient.isGuestHasAcceptedReservation(user.getUsername())) {
+                reservationServiceClient.cancelMyPendingReservationsGuest(jwtToken);
+
                 userRepository.delete(user);
 
                 return new MessageResponse("User deleted successfully.");
@@ -121,6 +129,10 @@ public class UserService {
             }
         } else if (roles.contains("ROLE_HOST")) {
             if(!reservationServiceClient.isHostHasAcceptedReservation(user.getUsername())) {
+                reservationServiceClient.declineMyPendingReservationsHost(jwtToken);
+
+                accommodationServiceClient.deleteAllAccommodationsByHost(jwtToken);
+
                 userRepository.delete(user);
 
                 return new MessageResponse("User deleted successfully.");

@@ -14,7 +14,7 @@ public class PasswordChangeRequest {
     @Size(min = 5, max = 20)
     private String newPassword;
 
-    @NotBlank(message = "Repeated new password is required.")
+    @NotBlank(message = "Repeat new password is required.")
     @Size(min = 5, max = 20)
     private String repeatNewPassword;
 }
