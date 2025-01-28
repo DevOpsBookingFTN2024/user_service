@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
+import uns.ac.rs.user_service.dto.response.MessageResponse;
 
 @Service
 public class ReservationServiceClient {
@@ -30,6 +31,19 @@ public class ReservationServiceClient {
         }
     }
 
+    public void cancelMyPendingReservationsGuest(String jwtToken) {
+        try {
+            webClient.put()
+                    .uri("/reservations/guest/cancel-pending-reservations")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to connect to ReservationService: ", e);
+        }
+    }
+
     public boolean isHostHasAcceptedReservation(String host) {
         try {
             return Boolean.TRUE.equals(webClient.get()
@@ -39,6 +53,19 @@ public class ReservationServiceClient {
                     .retrieve()
                     .bodyToMono(Boolean.class)
                     .block());
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to connect to ReservationService: ", e);
+        }
+    }
+
+    public void declineMyPendingReservationsHost(String jwtToken) {
+        try {
+            webClient.put()
+                    .uri("/reservations/host/decline-pending-reservations")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + jwtToken)
+                    .retrieve()
+                    .toBodilessEntity()
+                    .block();
         } catch (Exception e) {
             throw new RuntimeException("Failed to connect to ReservationService: ", e);
         }

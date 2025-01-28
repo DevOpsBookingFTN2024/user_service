@@ -69,7 +69,8 @@ public class AuthService {
 
         if (strRoles == null) {
             Role guestRole = roleRepository.findByName(ERole.ROLE_GUEST)
-                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: " + ERole.ROLE_GUEST));
+                    .orElseThrow(() -> new NoSuchElementException("Role is not found with name: "
+                            + ERole.ROLE_GUEST));
             roles.add(guestRole);
         } else {
             strRoles.forEach(role -> {
@@ -96,24 +97,37 @@ public class AuthService {
         }
 
         newUser.setRoles(roles);
+
         userRepository.save(newUser);
+
         return new MessageResponse("User registered successfully.");
     }
 
     public JwtResponse authenticateUser(LoginRequest loginRequest) {
         try {
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+            Authentication authentication = authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(
+                            loginRequest.getUsername(),
+                            loginRequest.getPassword()
+                    ));
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = jwtUtils.generateJwtToken(authentication);
 
             UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-            List<String> roles = userDetails.getAuthorities().stream()
+            List<String> roles = userDetails
+                    .getAuthorities()
+                    .stream()
                     .map(GrantedAuthority::getAuthority)
                     .collect(Collectors.toList());
 
-            return new JwtResponse(jwt, userDetails.getId(), userDetails.getUsername(), userDetails.getEmailAddress(), roles);
+            return new JwtResponse(
+                    jwt,
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    userDetails.getEmailAddress(),
+                    roles
+            );
         } catch (AuthenticationException ex) {
             throw new BadCredentialsException("Invalid username or password.");
         }  catch (Exception ex) {
