@@ -22,6 +22,7 @@ import uns.ac.rs.user_service.repository.RoleRepository;
 import uns.ac.rs.user_service.repository.UserRepository;
 import uns.ac.rs.user_service.security.jwt.JwtUtils;
 import uns.ac.rs.user_service.security.services.UserDetailsImpl;
+import uns.ac.rs.user_service.service.client.NotificationServiceClient;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -45,6 +46,9 @@ public class AuthService {
 
     @Autowired
     private JwtUtils jwtUtils;
+
+    @Autowired
+    private NotificationServiceClient notificationServiceClient;
 
     public MessageResponse registerUser(RegistrationRequest registrationRequest) {
         if (userRepository.existsByUsername(registrationRequest.getUsername())) {
@@ -99,6 +103,19 @@ public class AuthService {
         newUser.setRoles(roles);
 
         userRepository.save(newUser);
+
+        Set<String> rolesString = newUser.getRoles()
+                .stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toSet());
+
+        if (rolesString.contains("ROLE_HOST")) {
+            notificationServiceClient.createHostNotificationSettings(newUser.getUsername());
+        } else if (rolesString.contains("ROLE_GUEST")) {
+            notificationServiceClient.createGuestNotificationSettings(newUser.getUsername());
+        } else {
+            throw new SecurityException("User does not have permission for this action.");
+        }
 
         return new MessageResponse("User registered successfully.");
     }
