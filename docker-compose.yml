@@ -1,3 +1,7 @@
+networks:
+  booking-network:
+    external: true
+
 services:
   postgresql-db-user:
     image: postgres:latest
@@ -9,6 +13,8 @@ services:
       POSTGRES_PASSWORD: admin
     volumes:
       - postgresql-db-user:/var/lib/postgresql/data
+    networks:
+      - booking-network
 
   user-service:
     build: .
@@ -22,6 +28,19 @@ services:
     depends_on:
       - postgresql-db-user
     restart: on-failure
+    networks:
+      - booking-network
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    ports:
+      - "16686:16686" # the jaeger UI port
+      - "4317:4317" # the open telemetry grpc port for sending traces
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - LOG_LEVEL=debug
+    networks:
+      - booking-network
 
 volumes:
   postgresql-db-user:
